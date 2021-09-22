@@ -1,0 +1,19 @@
+#!/bin/sh
+
+APP=SAMPLE
+
+ARCH="x86_64"
+
+MIRROR="https://archlinux.org/packages/"
+
+for REPO in { "core" "extra" "community" "multilib" }; do
+for VAR in { "SAMPLE" };
+do wget ${MIRROR}/${REPO}/${ARCH}/$VAR/download && mv ./download ./$VAR.tar.zst; done
+done
+for f in *.tar.zst; do tar xf "$f"; done
+
+mkdir ./$APP.AppDir;
+
+mv ./usr ./$APP.AppDir/;
+mv ./etc ./$APP.AppDir/;
+mv ./lib ./$APP.AppDir/;
