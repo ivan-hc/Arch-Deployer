@@ -1,19 +1,50 @@
 #!/bin/sh
 
-APP=SAMPLE
+for APP in $1; do
+	mkdir -p ./$1
+	cd ./$1
+	ARCH=$(uname -m)
+	MIRROR="https://archlinux.org/packages/"
+	for REPO in { "core" "extra" "community" "multilib" }; do
+	wget ${MIRROR}/${REPO}/${ARCH}/$APP/download && mv ./download ./$APP.tar.zst;
+	done
+	tar fx ./*.tar.zst
+	DEP=$( cat ./.PKGINFO | grep "depend" | grep -v "makedepend" | grep -v "optdepend" | cut -c 10- )
+	echo $DEP | tr ' ' '\n' >> DEP
+	awk '{ print "\""$0"\""}' DEP
+	ARGS=$( cat ./DEP )
+	for VAR in ${ARGS} ; do
+		for REPO in { "core" "extra" "community" "multilib" }; do
+		wget ${MIRROR}/${REPO}/${ARCH}/$VAR/download && mv ./download ./$VAR.tar.zst; 
+		done
+	done
+	for f in *.tar.zst; do 
+		tar xf "$f"; 
+	done
+	mkdir ./$APP.AppDir
+	mv ./bin ./$APP.AppDir/ 2>/dev/null
+	mv ./boot ./$APP.AppDir/ 2>/dev/null
+	mv ./dev ./$APP.AppDir/ 2>/dev/null
+	mv ./etc ./$APP.AppDir/ 2>/dev/null
+	mv ./lib ./$APP.AppDir/ 2>/dev/null
+	mv ./lib64 ./$APP.AppDir/ 2>/dev/null
+	mv ./libx32 ./$APP.AppDir/ 2>/dev/null
+	mv ./media ./$APP.AppDir/ 2>/dev/null
+	mv ./mnt ./$APP.AppDir/ 2>/dev/null
+	mv ./opt ./$APP.AppDir/ 2>/dev/null
+	mv ./proc ./$APP.AppDir/ 2>/dev/null
+	mv ./run ./$APP.AppDir/ 2>/dev/null
+	mv ./sbin ./$APP.AppDir/ 2>/dev/null
+	mv ./srv ./$APP.AppDir/ 2>/dev/null
+	mv ./sys ./$APP.AppDir/ 2>/dev/null
+	mv ./tmp ./$APP.AppDir/ 2>/dev/null
+	mv ./usr ./$APP.AppDir/ 2>/dev/null
+	mv ./var ./$APP.AppDir/ 2>/dev/null
+	echo '
 
-ARCH="x86_64"
 
-MIRROR="https://archlinux.org/packages/"
+        The directory '$APP'.AppDir is ready!
 
-for REPO in { "core" "extra" "community" "multilib" }; do
-for VAR in { "SAMPLE" };
-do wget ${MIRROR}/${REPO}/${ARCH}/$VAR/download && mv ./download ./$VAR.tar.zst; done
+
+	'
 done
-for f in *.tar.zst; do tar xf "$f"; done
-
-mkdir ./$APP.AppDir;
-
-mv ./usr ./$APP.AppDir/;
-mv ./etc ./$APP.AppDir/;
-mv ./lib ./$APP.AppDir/;
