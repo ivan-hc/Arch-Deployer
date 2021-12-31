@@ -25,4 +25,6 @@ At the end of the process, all the packages will be extracted and the folders pl
 - pkg2appimage, at https://github.com/AppImage/pkg2appimage
 
 # See also
-"AM" the multi-architecture Application Manager for any GNU/Linux distribution https://github.com/ivan-hc/AM-application-manager
+"AM" the multi-architecture Application Manager for any GNU/Linux distribution, at
+
+### https://github.com/ivan-hc/AM-application-manager
