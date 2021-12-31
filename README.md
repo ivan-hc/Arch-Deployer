@@ -2,9 +2,10 @@
 A script to bulk download an Arch Linux package with all its dependencies.
 
 # Usage
-1. Download the script:
+1. Obtain the script, this can be done in multiple ways:
   
-     `wget https://raw.githubusercontent.com/ivan-hc/Arch-Deployer/main/arch-deployer`
+    - `wget https://raw.githubusercontent.com/ivan-hc/Arch-Deployer/main/arch-deployer`
+    - Using our favorite AUR helper, eg. `paru -S arch-deployer-git`
      
 2. Made the script executable:  
 
