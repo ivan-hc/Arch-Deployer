@@ -11,12 +11,15 @@ for APP in $1; do
 	tar fx ./*.tar.zst
 	DEP=$( cat ./.PKGINFO | grep "depend" | grep -v "makedepend" | grep -v "optdepend" | cut -c 10- )
 	echo $DEP | tr ' ' '\n' >> DEP
+	MAKEDEP=$( cat ./.PKGINFO | grep "makedepend" | cut -c 14- )
+	echo $MAKEDEP | tr ' ' '\n' >> DEP
 	awk '{ print "\""$0"\""}' DEP
 	ARGS=$( cat ./DEP )
 	for VAR in ${ARGS} ; do
 		for REPO in { "core" "extra" "community" "multilib" }; do
 		wget ${MIRROR}/${REPO}/${ARCH}/$VAR/download && mv ./download ./$VAR.tar.zst; 
 		done
+		ARGS=$( cat ./DEP )
 	done
 	for f in *.tar.zst; do 
 		tar xf "$f"; 
@@ -40,6 +43,12 @@ for APP in $1; do
 	mv ./tmp ./$APP.AppDir/ 2>/dev/null
 	mv ./usr ./$APP.AppDir/ 2>/dev/null
 	mv ./var ./$APP.AppDir/ 2>/dev/null
+	wget https://github.com/project-portable/libunionpreload/releases/download/amd64/libunionpreload.so
+	chmod a+x libunionpreload.so
+	mv ./libunionpreload.so ./$APP.AppDir/ 2>/dev/null
+	wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-$ARCH.AppImage
+	mv ./appimagetool-$ARCH.AppImage ./appimagetool
+	chmod a+x ./appimagetool
 	echo '
 
 
@@ -48,3 +57,72 @@ for APP in $1; do
 
 	'
 done
+
+cat > AppRun <<\EOF
+#!/bin/sh
+HERE="$(dirname "$(readlink -f "${0}")")"
+export UNION_PRELOAD="${HERE}"
+export LD_PRELOAD="${HERE}/libunionpreload.so"
+export PATH="${HERE}"/usr/bin/:"${HERE}"/usr/sbin/:"${HERE}"/usr/games/:"${HERE}"/bin/:"${HERE}"/sbin/:"${PATH}"
+export LD_LIBRARY_PATH="${HERE}"/usr/lib/:"${HERE}"/usr/lib/i386-linux-gnu/:"${HERE}"/usr/lib/x86_64-linux-gnu/:"${HERE}"/usr/lib32/:"${HERE}"/usr/lib64/:"${HERE}"/lib/:"${HERE}"/lib/i386-linux-gnu/:"${HERE}"/lib/x86_64-linux-gnu/:"${HERE}"/lib32/:"${HERE}"/lib64/:"${LD_LIBRARY_PATH}"
+export PYTHONPATH="${HERE}"/usr/share/pyshared/:"${PYTHONPATH}"
+export PYTHONHOME="${HERE}"/usr/
+export XDG_DATA_DIRS="${HERE}"/usr/share/:"${XDG_DATA_DIRS}"
+export PERLLIB="${HERE}"/usr/share/perl5/:"${HERE}"/usr/lib/perl5/:"${PERLLIB}"
+export GSETTINGS_SCHEMA_DIR="${HERE}"/usr/share/glib-2.0/schemas/:"${GSETTINGS_SCHEMA_DIR}"
+export QT_PLUGIN_PATH="${HERE}"/usr/lib/qt4/plugins/:"${HERE}"/usr/lib/i386-linux-gnu/qt4/plugins/:"${HERE}"/usr/lib/x86_64-linux-gnu/qt4/plugins/:"${HERE}"/usr/lib32/qt4/plugins/:"${HERE}"/usr/lib64/qt4/plugins/:"${HERE}"/usr/lib/qt5/plugins/:"${HERE}"/usr/lib/i386-linux-gnu/qt5/plugins/:"${HERE}"/usr/lib/x86_64-linux-gnu/qt5/plugins/:"${HERE}"/usr/lib32/qt5/plugins/:"${HERE}"/usr/lib64/qt5/plugins/:"${QT_PLUGIN_PATH}"
+EXEC=$(grep -e '^Exec=.*' "${HERE}"/*.desktop | head -n 1 | cut -d "=" -f 2- | sed -e 's|%.||g')
+exec ${EXEC} "$@"
+EOF
+chmod a+x AppRun
+
+mv ./AppRun ./$APP.AppDir/
+	cp ./$APP.AppDir/usr/share/icons/hicolor/22x22/apps/* ./$APP.AppDir/
+	cp ./$APP.AppDir/usr/share/icons/hicolor/24x24/apps/* ./$APP.AppDir/
+	cp ./$APP.AppDir/usr/share/icons/hicolor/32x32/apps/* ./$APP.AppDir/
+	cp ./$APP.AppDir/usr/share/icons/hicolor/48x48/apps/* ./$APP.AppDir/
+	cp ./$APP.AppDir/usr/share/icons/hicolor/64x64/apps/* ./$APP.AppDir/
+	cp ./$APP.AppDir/usr/share/icons/hicolor/128x128/apps/* ./$APP.AppDir/
+	cp ./$APP.AppDir/usr/share/icons/hicolor/256x256/apps/* ./$APP.AppDir/
+	cp ./$APP.AppDir/usr/share/icons/hicolor/512x512/apps/* ./$APP.AppDir/
+	cp ./$APP.AppDir/usr/share/icons/hicolor/scalable/apps/* ./$APP.AppDir/
+	cp ./$APP.AppDir/usr/share/applications/* ./$APP.AppDir/
+cd ..
+echo "
+############################################################################
+
+ Opening the $APP.AppDir directory, now is possible to check 
+
+ and manually fix any issue before you export it to an AppImage. 
+
+ To export $APP.AppDir to an AppImage it is sufficient to run:
+
+    "ARCH=$ARCH ./$APP/appimagetool -n ./$APP/$APP.AppDir" 
+
+ YOU CAN ALREADY PERFORM THIS COMMAND IN THE NEXT STEP USING APPIMAGETOOL!
+
+############################################################################
+"
+sleep 2
+exo-open --launch FileManager ./$APP/$APP.AppDir
+
+echo ""
+
+read -p " EXPORTING $APP.AppDir TO AN APPIMAGE, PRESS ANY KEY TO CONTINUE" yn
+case $yn in
+	[Yy]*|[Nn]*|* ) echo ""; ARCH=x86_64 ./$APP/appimagetool -n ./$APP/$APP.AppDir && mv *.AppImage $(xdg-user-dir DESKTOP) 2>/dev/null && echo "" && echo " $APP HAS BEEN EXPORTED ON YOUR DESKTOP!" && echo "" && exit; break;;
+esac
+
+echo "
+############################################################################
+
+
+                  THANK YOU FOR USING ARCH-DEPLOYER!
+
+            SITE: https://github.com/ivan-hc/Arch-Deployer
+
+       SEE ALSO https://github.com/ivan-hc/AM-application-manager
+
+
+############################################################################
+"
