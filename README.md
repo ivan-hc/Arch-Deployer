@@ -21,7 +21,7 @@ At the end of the process, all the packages will be extracted and the folders pl
 - libunionpreload from https://github.com/project-portable/libunionpreload
 - appimagetool from https://github.com/AppImage/AppImageKit
 
-##### This project is also inspired by
+##### This project is heavily inspired by
 - pkg2appimage, at https://github.com/AppImage/pkg2appimage
 
 # See also
