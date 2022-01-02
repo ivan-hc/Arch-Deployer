@@ -21,8 +21,23 @@ for APP in $1; do
 	DEP=$( cat ./.PKGINFO | grep "depend" | grep -v "makedepend" | grep -v "optdepend" | cut -c 10- )
 	echo $DEP | tr ' ' '\n' >> DEP
 	MAKEDEP=$( cat ./.PKGINFO | grep "makedepend" | cut -c 14- )
+
 	echo $MAKEDEP | tr ' ' '\n' >> DEP
 	awk '{ print "\""$0"\""}' DEP
+	echo "" && echo "############################################################################" && echo ""
+	while true; do
+		read -r -p " DO YOU WISH TO ADD OTHER PACKAGES TO THE LIST (y/N)?" response
+		case $response in
+		[Yy]* ) echo "" && echo ' OPENING THE "DEP" FILE USING YOUR DEFAULT TEXT EDITOR' && sleep 2 && xdg-open DEP && echo "" &&
+			while true; do
+				read -r -p  " PRESS ENTER TO CONTINUE" response
+				case $response in
+				* ) echo "" && echo " THE FOLLOWING PACKAGES WILL BE DOWNLOADED:" && echo "" && awk '{ print "\""$0"\""}' DEP && echo "" && break;
+				esac
+			done;;
+		[Nn]*|* ) echo "" && echo " OK, LET'S GO!" && echo "" && break;;
+		esac
+	done
 	ARGS=$( cat ./DEP )
 	for VAR in ${ARGS} ; do
 		for REPO in { "core" "extra" "community" "multilib" }; do
@@ -111,13 +126,12 @@ echo ""
 while true; do
 	read -r -p  " DO YOU WISH TO EXPORT THE $APP.AppDir TO AN APPIMAGE (Y/n)?" response
 	case $response in
-		[Yy]* ) echo ""; ARCH=$(uname -m) ./$APP/appimagetool -n ./$APP/$APP.AppDir 2>/dev/null && 
+		[Nn]* ) echo ""; echo " OPERATION ABORTED, EXITING..." && sleep 1 && echo "" && break;;
+		[Yy]*|* ) echo ""; ARCH=$(uname -m) ./$APP/appimagetool -n ./$APP/$APP.AppDir 2>/dev/null && 
 			mv *.AppImage $(xdg-user-dir DESKTOP) 2>/dev/null; echo "" &&
 			echo "############################################################################" &&
 			echo "" && echo " $APP HAS BEEN EXPORTED ON YOUR DESKTOP!" && sleep 2 && echo "" && 
 			echo " REPEAT THIS OPERATION IN CASE THE APPIMAGE DOESN'T WORK:" && sleep 2 && echo "" >&2;;
-		[Nn]* ) echo ""; echo " OPERATION ABORTED, EXITING..." && sleep 1 && echo "" && break;;
-		* ) echo ""; echo " PLEASE, ANSWER Y OR N" && echo "" >&2;;
 	esac
 done
 
