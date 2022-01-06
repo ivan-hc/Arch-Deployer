@@ -2,9 +2,9 @@
 A script to bulk download an Arch Linux package with all its dependencies.
 --------------------------------------------------------------------
 - [Installation methods](#installation-methods)
-      - [Using "AM" APPLICATION MANAGER](#1-am-application-manager)
-      - [Using "wget" (locally)](#2-wget-the-script-directly)
-      - [Using your favourite AUR helper](#3-arch-user-repository-aur)
+     - [Using "AM" APPLICATION MANAGER](#1-am-application-manager) (recommended)
+     - [Using "wget" (locally)](#2-wget-the-script-directly)
+     - [Using your favourite AUR helper](#3-arch-user-repository-aur)
 - [Usage](#usage)
 - [Related Projects](#related-projects)
 --------------------------------------------------------------------
