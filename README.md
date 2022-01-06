@@ -34,7 +34,7 @@ You can obtain and run the script locally, this way:
 Perform the same commands periodically to get the latest versio of this script.
 
 ### 3. ARCH USER REPOSITORY (AUR)
-A third-party script is also available from AUR, using our favorite AUR helper, ie
+Using our favorite AUR helper, ie
     
          paru -S arch-deployer-git
 
