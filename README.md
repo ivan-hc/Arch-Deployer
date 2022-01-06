@@ -5,7 +5,7 @@ A script to bulk download an Arch Linux package with all its dependencies.
 - [Installation methods](#installation-methods)
      - [Using "AM"](#1-am-application-manager) (recommended)
      - [Using "wget"](#2-wget-the-script-directly) (locally)
-     - [Using your favourite AUR helper](#3-arch-user-repository-aur) (third-party method)
+     - [Using your favourite AUR helper](#3-arch-user-repository-aur)
 - [Usage](#usage)
 - [Related Projects](#related-projects)
 --------------------------------------------------------------------
@@ -13,7 +13,7 @@ A script to bulk download an Arch Linux package with all its dependencies.
 To obtain the script you can run multiple methods, the main three are:
  1. [Using "AM", the Application Manager](#1-am-application-manager) (recommended)
  2. [Using "wget"](#2-wget-the-script-directly) (locally)
- 3. [Using your favourite AUR helper](#3-arch-user-repository-aur) (third-party method)
+ 3. [Using your favourite AUR helper](#3-arch-user-repository-aur)
 
 ### 1. "AM" APPLICATION MANAGER
 I recommend using "[AM" Application Manager](https://github.com/ivan-hc/AM-application-manager)", because it can easilly keep you updated with the latest version of all the programs managed, and without root permissions ("sudo" is needed only to install/remove the programs):
@@ -38,7 +38,7 @@ A third-party script is also available from AUR, using our favorite AUR helper, 
     
          paru -S arch-deployer-git
 
-NOTE: I'm not the maintainer of any AUR package, more updated versions are only available using "AM" (method 1) or wget (method 2).
+NOTE: I'm not the maintainer of any AUR script.
 
 # Usage
 If you have downloaded it locally (see the method 2, above):
