@@ -34,11 +34,11 @@ You can obtain and run the script locally, this way:
 Perform the same commands periodically to get the latest versio of this script.
 
 ### 3. ARCH USER REPOSITORY (AUR)
-A [third-party script on AUR](https://aur.archlinux.org/packages/arch-deployer-git/) is also available, using our favorite AUR helper, ie
+A third-party script is also available from AUR, using our favorite AUR helper, ie
     
          paru -S arch-deployer-git
 
-NOTE: I'm not the maintainer of any AUR package (method 3), more updated versions are only available using "AM" (method 1) or wget (method 2). You choose.
+NOTE: I'm not the maintainer of any AUR package, more updated versions are only available using "AM" (method 1) or wget (method 2).
 
 # Usage
 If you have downloaded it locally (see the method 2, above):
