@@ -1,5 +1,6 @@
 # Arch-Deployer
 A script to bulk download an Arch Linux package with all its dependencies.
+
 --------------------------------------------------------------------
 - [Installation methods](#installation-methods)
      - [Using "AM"](#1-am-application-manager) (recommended)
