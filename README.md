@@ -1,6 +1,13 @@
 # Arch-Deployer
 A script to bulk download an Arch Linux package with all its dependencies.
-
+--------------------------------------------------------------------
+- [Installation methods](#installation-methods)
+      - [Using "AM" APPLICATION MANAGER](#1-am-application-manager)
+      - [Using "wget" (locally)](#2-wget-the-script-directly)
+      - [Using your favourite AUR helper](#3-arch-user-repository-aur)
+- [Usage](#usage)
+- [Related Projects](#related-projects)
+--------------------------------------------------------------------
 # Installation methods
 To obtain the script you can run multiple methods:
  1. [Using "AM" APPLICATION MANAGER](#1-am-application-manager) (recommended)
@@ -51,7 +58,6 @@ At the end of the process, all the packages will be extracted and the folders pl
 ##### This project is heavily inspired by
 - pkg2appimage, at https://github.com/AppImage/pkg2appimage
 
-# See also
-"AM" the multi-architecture Application Manager for any GNU/Linux distribution, at
-
-### https://github.com/ivan-hc/AM-application-manager
+### Arch-Deployer is part of "AM"
+the multi-architecture Application Manager for any GNU/Linux distribution, find out more at
+# [github.com/ivan-hc/AM-application-manager](https://github.com/ivan-hc/AM-application-manager)
