@@ -14,9 +14,9 @@ case "$1" in
 		mkdir -p ./$1
 		cd ./$1
 		ARCH=$(uname -m)
-		MIRROR="https://archlinux.org/packages/"
+		MIRROR="https://mirror.rackspace.com/archlinux"
 		for REPO in { "core" "extra" "community" "multilib" }; do
-		wget ${MIRROR}/${REPO}/${ARCH}/$APP/download && mv ./download ./$APP.tar.zst;
+		wget -r -erobots=off -l1 -np -A $APP-*.tar.zst -nd ${MIRROR}/${REPO}/os/${ARCH}/
 		done
 		tar fx ./*.tar.zst
 		DEP=$( cat ./.PKGINFO | grep "depend" | grep -v "makedepend" | grep -v "optdepend" | cut -c 10- )
@@ -42,7 +42,7 @@ case "$1" in
 		ARGS=$( cat ./DEP )
 		for VAR in ${ARGS} ; do
 			for REPO in { "core" "extra" "community" "multilib" }; do
-			wget ${MIRROR}/${REPO}/${ARCH}/$VAR/download && mv ./download ./$VAR.tar.zst; 
+			wget -r -erobots=off -l1 -np -A $VAR-*.tar.zst -nd ${MIRROR}/${REPO}/os/${ARCH}/
 			done
 			ARGS=$( cat ./DEP )
 		done
