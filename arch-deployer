@@ -1,6 +1,41 @@
 #!/bin/sh
 
+ARCH=$(uname -m)
+MIRROR="https://archlinux.org/packages"
+#CHAOTICAUR="https://builds.garudalinux.org/repos/chaotic-aur/" # UNCOMMENT TO ENABLE THE SUPPORT FOR AUR PACKAGES (CHAOTIC AUR)
+
 case "$1" in
+-h|--help ) echo '
+
+        ╭━━━┳━━━┳━━━┳╮╱╭╮╭━━━┳━━━┳━━━┳╮╱╱╭━━━┳╮╱╱╭┳━━━┳━━━╮
+        ┃╭━╮┃╭━╮┃╭━╮┃┃╱┃┃╰╮╭╮┃╭━━┫╭━╮┃┃╱╱┃╭━╮┃╰╮╭╯┃╭━━┫╭━╮┃
+        ┃┃╱┃┃╰━╯┃┃╱╰┫╰━╯┃╱┃┃┃┃╰━━┫╰━╯┃┃╱╱┃┃╱┃┣╮╰╯╭┫╰━━┫╰━╯┃
+        ┃╰━╯┃╭╮╭┫┃╱╭┫╭━╮┃╱┃┃┃┃╭━━┫╭━━┫┃╱╭┫┃╱┃┃╰╮╭╯┃╭━━┫╭╮╭╯
+        ┃╭━╮┃┃┃╰┫╰━╯┃┃╱┃┃╭╯╰╯┃╰━━┫┃╱╱┃╰━╯┃╰━╯┃╱┃┃╱┃╰━━┫┃┃╰╮
+        ╰╯╱╰┻╯╰━┻━━━┻╯╱╰╯╰━━━┻━━━┻╯╱╱╰━━━┻━━━╯╱╰╯╱╰━━━┻╯╰━╯
+
+ A SCRIPT TO BULK DOWNLOAD AN ARCH LINUX PACKAGE WITH ALL ITS DEPENDENCIES
+ TO BE CONVERTED IN APPIMAGE. ADD THE NAME OF A PROGRAM FROM THE ARCH 
+ LINUX REPOSITORIES. "CHAOTIC-AUR" SUPPORT CAN BE ENABLED TOO.
+ 
+ USAGE:
+       arch-deployer $PROGRAM (download a program)
+
+       arch-deployer -v (show the version)
+
+       arch-deployer -h (show this message)
+
+ ARCH-DEPLOYER TAKES ALL THE PACKAGES FROM HTTPS://ARCHLINUX.ORG/PACKAGES
+
+ TO ENABLE "AUR", UNCOMMENT THE LINE 5 OF THE ARCH-DEPLOYER MAIN SCRIPT.
+ AUR PACKAGES ARE TAKEN FROM "CHAOTIC-AUR" INSTEAD, AT
+ HTTPS://BUILDS.GARUDALINUX.ORG/REPOS/CHAOTIC-AUR
+
+ SITE: HTTPS://GITHUB.COM/IVAN-HC/ARCH-DEPLOYER
+
+ SEE ALSO: HTTPS://GITHUB.COM/IVAN-HC/AM-APPLICATION-MANAGER
+';;
+-v|--version ) echo "1.0.0";;
 '' ) echo "" && echo '  PLEASE ADD THE NAME OF A PROGRAM FROM THE ARCH LINUX REPOSITORIES' && echo "" &&
 	echo '  USAGE:     arch-deployer $PROGRAM' && echo "" &&
 	echo '  VISIT https://archlinux.org/packages TO SEE THE PACKAGES AVAILABLE' && echo "" ;;
@@ -11,42 +46,44 @@ case "$1" in
 	sleep 2
 	break
 	else
+
+# DOWNLOADING THE APPLICATION
 	mkdir -p ./$1
 	cd ./$1
-	ARCH=$(uname -m)
-	MIRROR="https://archmirror.it/repos"
-#	CHAOTICAUR="https://builds.garudalinux.org/repos/chaotic-aur/" # UNCOMMENT TO ENABLE THE SUPPORT FOR AUR PACKAGES (CHAOTIC AUR)
 	for REPO in { "core" "extra" "community" "multilib" }; do
-	wget -r -erobots=off -l1 -np -A $APP-*.tar.zst -nd ${MIRROR}/${REPO}/os/${ARCH}/
-#	wget -r -A $APP-*.tar.zst -nd ${CHAOTICAUR}/${ARCH}/ && break
+	wget ${MIRROR}/${REPO}/${ARCH}/$APP/download && mv ./download ./$APP.tar.zst;
+	wget -r -A $APP-*.tar.zst -nd ${CHAOTICAUR}/${ARCH}/ && break
 	done
 	tar fx ./*.tar.zst
+
+# READ AND/OR EDIT THE DEPENDENCES LIST
 	DEP=$( cat ./.PKGINFO | grep "depend" | grep -v "makedepend" | grep -v "optdepend" | cut -c 10- )
-	echo $DEP | tr ' ' '\n' >> DEP
 	MAKEDEP=$( cat ./.PKGINFO | grep "makedepend" | cut -c 14- )
+	echo $DEP | tr ' ' '\n' >> DEP
 	echo $MAKEDEP | tr ' ' '\n' >> DEP
 	awk '{ print "\""$0"\""}' DEP
 	echo "" && echo "############################################################################" && echo ""
 	while true; do
-		read -r -p " DO YOU WISH TO ADD OTHER PACKAGES TO THE LIST (y/N)?" response
+	read -r -p " DO YOU WISH TO ADD OTHER PACKAGES TO THE LIST (y/N)?" response
+	case $response in
+	[Yy]* ) echo "" && echo ' OPENING THE "DEP" FILE USING YOUR DEFAULT TEXT EDITOR' && xdg-open DEP && echo "" &&
+		while true; do
+		read -r -p  " PRESS ENTER TO CONTINUE" response
 		case $response in
-		[Yy]* ) echo "" && echo ' OPENING THE "DEP" FILE USING YOUR DEFAULT TEXT EDITOR' && sleep 2 && xdg-open DEP && echo "" &&
-			while true; do
-			read -r -p  " PRESS ENTER TO CONTINUE" response
-			case $response in
-			* ) echo "" && echo " THE FOLLOWING PACKAGES WILL BE DOWNLOADED:" && echo "" && awk '{ print "\""$0"\""}' DEP && echo "" && break;
-			esac
-		done;;
-		[Nn]*|* ) echo "" && echo " OK, LET'S GO!" && echo "" && break;;
+		* ) echo "" && echo " THE FOLLOWING PACKAGES WILL BE DOWNLOADED:" && echo "" && awk '{ print "\""$0"\""}' DEP && echo "" && break;
 		esac
+	done;;
+	[Nn]*|* ) echo "" && echo " OK, LET'S GO!" && echo "" && break;;
+	esac
 	done
+
+# DOWNLOAD AND EXTRACT THE DEPENDENCE'S PACKAGES TO THE APPDIR
 	ARGS=$( cat ./DEP )
-	for VAR in ${ARGS} ; do
-		for REPO in { "core" "extra" "community" "multilib" }; do
-		wget -r -erobots=off -l1 -np -A $VAR-*.tar.zst -nd ${MIRROR}/${REPO}/os/${ARCH}/
-#		wget -r -A $VAR-*.tar.zst -nd ${CHAOTICAUR}/${ARCH}/ && break # UNCOMMENT TO ENABLE THE SUPPORT FOR AUR PACKAGES (CHAOTIC AUR)
-		done
-	ARGS=$( cat ./DEP )
+	for DEPENDENCES in ${ARGS} ; do
+	for REPO in { "core" "extra" "community" "multilib" }; do
+	wget ${MIRROR}/${REPO}/${ARCH}/$APP/download && mv ./download ./$DEPENDENCES.tar.zst;
+	wget -r -A $DEPENDENCES-*.tar.zst -nd ${CHAOTICAUR}/${ARCH}/ && break
+	done
 	done
 	for f in *.tar.zst; do 
 	tar xf "$f"; 
@@ -70,12 +107,18 @@ case "$1" in
 	mv ./tmp ./$APP.AppDir/ 2>/dev/null
 	mv ./usr ./$APP.AppDir/ 2>/dev/null
 	mv ./var ./$APP.AppDir/ 2>/dev/null
+
+# DOWNLOADING LIBUNIONPRELOAD
 	wget https://github.com/project-portable/libunionpreload/releases/download/amd64/libunionpreload.so
 	chmod a+x libunionpreload.so
 	mv ./libunionpreload.so ./$APP.AppDir/ 2>/dev/null
+
+# DOWNLOADING APPIMAGETOOL (TO EXPORT THE APPDIR TO AN APPIMAGE)
 	wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-$ARCH.AppImage
 	mv ./appimagetool-$ARCH.AppImage ./appimagetool
 	chmod a+x ./appimagetool
+
+# CREATING THE APPRUN SCRIPT
 	function1="'^Exec=.*'"
 	function2="'s|%.||g'"
 	echo '#!/bin/sh
@@ -93,43 +136,95 @@ export QT_PLUGIN_PATH="${HERE}"/usr/lib/qt4/plugins/:"${HERE}"/usr/lib/'$1'/:"${
 EXEC=$(grep -e '$function1' "${HERE}"/*.desktop | head -n 1 | cut -d "=" -f 2- | sed -e '$function2')
 exec ${EXEC} "$@"' >> AppRun
 	chmod a+x AppRun
-		mv ./AppRun ./$APP.AppDir/
-		initials=$(echo $APP | head -c 2)
-		cp ./$APP.AppDir/usr/share/icons/hicolor/22x22/apps/*$initials* ./$APP.AppDir/ 2>/dev/null
-		cp ./$APP.AppDir/usr/share/icons/hicolor/24x24/apps/*$initials* ./$APP.AppDir/ 2>/dev/null
-		cp ./$APP.AppDir/usr/share/icons/hicolor/32x32/apps/*$initials* ./$APP.AppDir/ 2>/dev/null
-		cp ./$APP.AppDir/usr/share/icons/hicolor/48x48/apps/*$initials* ./$APP.AppDir/ 2>/dev/null
-		cp ./$APP.AppDir/usr/share/icons/hicolor/64x64/apps/*$initials* ./$APP.AppDir/ 2>/dev/null
-		cp ./$APP.AppDir/usr/share/icons/hicolor/128x128/apps/*$initials* ./$APP.AppDir/ 2>/dev/null
-		cp ./$APP.AppDir/usr/share/icons/hicolor/256x256/apps/*$initials* ./$APP.AppDir/ 2>/dev/null
-		cp ./$APP.AppDir/usr/share/icons/hicolor/512x512/apps/*$initials* ./$APP.AppDir/ 2>/dev/null
-		cp ./$APP.AppDir/usr/share/icons/hicolor/scalable/apps/*$initials* ./$APP.AppDir/ 2>/dev/null
-		cp ./$APP.AppDir/usr/share/applications/*$initials* ./$APP.AppDir/ 2>/dev/null
+	mv ./AppRun ./$APP.AppDir/
+
+# TRY TO COPY ICON AND LAUNCHER INTO THE APPDIR
+	initials=$(echo $APP | head -c 2)
+	cp ./$APP.AppDir/usr/share/icons/hicolor/22x22/apps/*$initials* ./$APP.AppDir/ 2>/dev/null
+	cp ./$APP.AppDir/usr/share/icons/hicolor/24x24/apps/*$initials* ./$APP.AppDir/ 2>/dev/null
+	cp ./$APP.AppDir/usr/share/icons/hicolor/32x32/apps/*$initials* ./$APP.AppDir/ 2>/dev/null
+	cp ./$APP.AppDir/usr/share/icons/hicolor/48x48/apps/*$initials* ./$APP.AppDir/ 2>/dev/null
+	cp ./$APP.AppDir/usr/share/icons/hicolor/64x64/apps/*$initials* ./$APP.AppDir/ 2>/dev/null
+	cp ./$APP.AppDir/usr/share/icons/hicolor/128x128/apps/*$initials* ./$APP.AppDir/ 2>/dev/null
+	cp ./$APP.AppDir/usr/share/icons/hicolor/256x256/apps/*$initials* ./$APP.AppDir/ 2>/dev/null
+	cp ./$APP.AppDir/usr/share/icons/hicolor/512x512/apps/*$initials* ./$APP.AppDir/ 2>/dev/null
+	cp ./$APP.AppDir/usr/share/icons/hicolor/scalable/apps/*$initials* ./$APP.AppDir/ 2>/dev/null
+	cp ./$APP.AppDir/usr/share/applications/*$initials* ./$APP.AppDir/ 2>/dev/null
 	cd ..
 	echo "" && echo '############################################################################' && echo "" &&
 	echo "" && echo ' The '$APP'.AppDir is ready!	'
-	sleep 2
+	echo ' You may check it for issues to fix before you export it to an AppImage.' && echo "" && sleep 2 &&
+	echo '############################################################################' && echo ""
   	fi
 	done
-	echo "" && echo ' Opening the '$APP'.AppDir directory...' && echo "" && sleep 1 &&
-	echo ' You may check it for issues to fix before you export it to an AppImage.' && echo "" &&
-	echo '############################################################################'
+	echo "" && 
 	sleep 1
-	xdg-open ./$APP/$APP.AppDir
-	echo ""
+
+# CHECK THE APPDIR (QUESTION)
 	while true; do
+		read -r -p  " DO YOU WISH TO CHECK THE $APP.AppDir FIRST (Y/n)?" response
+		case $response in
+			[Nn]* ) break;;
+			[Yy]*|* ) echo ""; echo "############################################################################" &&
+				echo "" && echo " Opening the $APP.AppDir directory!" && sleep 1 && echo "" && 
+				echo " Exec the AppRun (command './AppRun') to test if everything works!" && sleep 1 &&
+				xdg-open ./$APP/$APP.AppDir && echo "" && break;;
+		esac
+	done
+
+# DOWNLOAD OTHER PACKAGES (IF NEEDED)
+	while true; do
+		read -r -p  " DO YOU WISH TO ADD OTHER PACKAGES (Y,n)?" response
+		case $response in
+			[Nn]* ) while true; do
 		read -r -p  " DO YOU WISH TO EXPORT THE $APP.AppDir TO AN APPIMAGE (Y/n)?" response
 		case $response in
-			[Nn]* ) echo ""; echo " OPERATION ABORTED, EXITING!" && echo "" && break;;
+			[Nn]* ) echo ""; echo "" && echo '############################################################################' && echo "" &&
+				echo '  THANK YOU FOR USING ARCH-DEPLOYER!' && echo "" && sleep 1 &&
+				echo "" && echo "  SITE: https://github.com/ivan-hc/AM-application-manager" && echo "" &&
+				echo '############################################################################'; echo ""; exit;;
 			[Yy]*|* ) echo ""; ARCH=$(uname -m) ./$APP/appimagetool -n ./$APP/$APP.AppDir 2>/dev/null && 
 				mv *.AppImage $(xdg-user-dir DESKTOP) 2>/dev/null; echo "" &&
 				echo "############################################################################" &&
 				echo "" && echo " $APP HAS BEEN EXPORTED ON YOUR DESKTOP!" && sleep 2 && echo "" && 
 				echo " REPEAT THIS OPERATION IN CASE THE APPIMAGE DOESN'T WORK:" && sleep 1 && echo "" >&2;;
 		esac
+	done && exit;;
+			[Yy]*|* ) while true; do
+					read -r -p  " PLEASE, ENTER THE PACKAGE NAME (or leave empty to continue): " packagename
+					case $packagename in
+					'' ) break;;
+					* ) for var in $packagename; do
+					chmod -R 777 ./$APP/$APP.AppDir
+					cd ./$APP/$APP.AppDir
+					for REPO in { "core" "extra" "community" "multilib" }; do
+					wget ${MIRROR}/${REPO}/${ARCH}/$packagename/download && mv ./download ./$packagename.tar.zst
+					wget -r -A $packagename-*.tar.zst -nd ${CHAOTICAUR}/${ARCH}/ && break
+					done
+					tar xf $packagename.tar.zst; 
+					chmod -R 777 ./*
+					rm -R -f ./2 ./.BUILDINFO ./.MTREE ./.PKGINFO ./*.tar.zst
+					unset $packagename
+					echo "" >2; done;;
+					esac
+			done
+		esac
+
+# EXPORT THE APPDIR TO AN APPIMAGE
+	while true; do
+		read -r -p  " Do you wish to export $APP.AppDir to an AppImage (Y/n)?" response
+		case $response in
+			[Nn]* ) break;;
+			[Yy]*|* ) echo ""; ARCH=$(uname -m) ./$APP/appimagetool -n ./$APP/$APP.AppDir 2>/dev/null && 
+				mv *.AppImage $(xdg-user-dir DESKTOP) 2>/dev/null; echo "" &&
+				echo "############################################################################" &&
+				echo "" && echo " $APP has been exported on your desktop!" && sleep 2 && echo "" && 
+				echo " Repeat this operation in case the AppImage doesn't work:" && sleep 1 && echo "" >&2;;
+		esac
 	done
-	echo "" && echo '############################################################################' && echo "" && echo "" &&
+	echo "" && echo '############################################################################' && echo "" &&
 	echo '  THANK YOU FOR USING ARCH-DEPLOYER!' && echo "" && sleep 1 && echo '  PLEASE CONSIDER SUBMITTING YOUR APPLICATION TO "AM"' &&
-	echo "" && echo "  SITE: https://github.com/ivan-hc/AM-application-manager" && echo "" && echo "" &&
-	echo '############################################################################'; echo ""; exit ;;
+	echo "" && echo "  SITE: HTTPS://GITHUB.COM/IVAN-HC/AM-APPLICATION-MANAGER" && echo "" &&
+	echo '############################################################################'; echo ""; exit 
+done
 esac
