@@ -81,7 +81,7 @@ case "$1" in
 	ARGS=$( cat ./DEP )
 	for DEPENDENCES in ${ARGS} ; do
 	for REPO in { "core" "extra" "community" "multilib" }; do
-	wget ${MIRROR}/${REPO}/${ARCH}/$APP/download && mv ./download ./$DEPENDENCES.tar.zst;
+	wget ${MIRROR}/${REPO}/${ARCH}/$DEPENDENCES/download && mv ./download ./$DEPENDENCES.tar.zst;
 	wget -r -A $DEPENDENCES-*.tar.zst -nd ${CHAOTICAUR}/${ARCH}/ && break
 	done
 	done
