@@ -55,17 +55,6 @@ Using our favorite AUR helper, ie
 
 NOTE: I'm not the maintainer of any AUR script.
 
-# Usage
-If you have downloaded it locally (see the method 2, above):
-
-    ./arch-deployer $PROGRAM
-
-If you have installed Arch-Deployer from "AM" (method 1) or AUR (method 3):
-
-    arch-deployer $PROGRAM
-  
-At the end of the process, all the packages will be extracted and the folders placed into an .AppDir directory, so you can work on an AppImage.
-
 # Related projects
 ##### Sources and tools
 - libunionpreload from https://github.com/project-portable/libunionpreload
