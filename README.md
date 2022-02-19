@@ -1,5 +1,20 @@
-# Arch-Deployer
-A script to bulk download an Arch Linux package with all its dependencies.
+        ╭━━━┳━━━┳━━━┳╮╱╭╮╭━━━┳━━━┳━━━┳╮╱╱╭━━━┳╮╱╱╭┳━━━┳━━━╮
+        ┃╭━╮┃╭━╮┃╭━╮┃┃╱┃┃╰╮╭╮┃╭━━┫╭━╮┃┃╱╱┃╭━╮┃╰╮╭╯┃╭━━┫╭━╮┃
+        ┃┃╱┃┃╰━╯┃┃╱╰┫╰━╯┃╱┃┃┃┃╰━━┫╰━╯┃┃╱╱┃┃╱┃┣╮╰╯╭┫╰━━┫╰━╯┃
+        ┃╰━╯┃╭╮╭┫┃╱╭┫╭━╮┃╱┃┃┃┃╭━━┫╭━━┫┃╱╭┫┃╱┃┃╰╮╭╯┃╭━━┫╭╮╭╯
+        ┃╭━╮┃┃┃╰┫╰━╯┃┃╱┃┃╭╯╰╯┃╰━━┫┃╱╱┃╰━╯┃╰━╯┃╱┃┃╱┃╰━━┫┃┃╰╮
+        ╰╯╱╰┻╯╰━┻━━━┻╯╱╰╯╰━━━┻━━━┻╯╱╱╰━━━┻━━━╯╱╰╯╱╰━━━┻╯╰━╯
+
+A SCRIPT TO BULK DOWNLOAD AN ARCH LINUX PACKAGE WITH ALL ITS DEPENDENCIES TO BE CONVERTED IN APPIMAGE. ADD THE NAME OF A PROGRAM FROM THE ARCH LINUX REPOSITORIES. "CHAOTIC-AUR" SUPPORT CAN BE ENABLED TOO.
+ 
+ USAGE:
+ - `arch-deployer $PROGRAM` (download a program)
+ - `arch-deployer -v` (show the version)
+ - `arch-deployer -h` (show this message)
+
+ ARCH-DEPLOYER TAKES ALL THE PACKAGES FROM HTTPS://ARCHLINUX.ORG/PACKAGES
+
+ TO ENABLE "AUR", UNCOMMENT THE LINE 5 OF THE ARCH-DEPLOYER MAIN SCRIPT. AUR PACKAGES ARE TAKEN FROM "CHAOTIC-AUR" INSTEAD, AT HTTPS://BUILDS.GARUDALINUX.ORG/REPOS/CHAOTIC-AUR
 
 --------------------------------------------------------------------
 - [Installation methods](#installation-methods)
