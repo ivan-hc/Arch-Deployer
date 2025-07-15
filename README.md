@@ -5,16 +5,14 @@
         ┃╭━╮┃┃┃╰┫╰━╯┃┃╱┃┃╭╯╰╯┃╰━━┫┃╱╱┃╰━╯┃╰━╯┃╱┃┃╱┃╰━━┫┃┃╰╮
         ╰╯╱╰┻╯╰━┻━━━┻╯╱╰╯╰━━━┻━━━┻╯╱╱╰━━━┻━━━╯╱╰╯╱╰━━━┻╯╰━╯
 
-A SCRIPT TO BULK DOWNLOAD AN ARCH LINUX PACKAGE WITH ALL ITS DEPENDENCIES TO BE CONVERTED IN APPIMAGE. ADD THE NAME OF A PROGRAM FROM THE ARCH LINUX REPOSITORIES. "CHAOTIC-AUR" SUPPORT CAN BE ENABLED TOO.
+A script to bulk download an arch linux package with all its dependencies to be converted in appimage. Add the name of a program from the Arch Linux repositories. "CHAOTIC-AUR" support can be enabled too.
  
- USAGE:
+# USAGE:
  - `arch-deployer $PROGRAM` (download a program)
  - `arch-deployer -v` (show the version)
  - `arch-deployer -h` (show this message)
 
- ARCH-DEPLOYER TAKES ALL THE PACKAGES FROM HTTPS://ARCHLINUX.ORG/PACKAGES
-
- TO ENABLE "AUR", UNCOMMENT THE LINE 5 OF THE ARCH-DEPLOYER MAIN SCRIPT. AUR PACKAGES ARE TAKEN FROM "CHAOTIC-AUR" INSTEAD, AT HTTPS://BUILDS.GARUDALINUX.ORG/REPOS/CHAOTIC-AUR
+All packages are taken from https://archlinux.org/packages, AUR packages are taken from "chaotic-aur" instead, at https://builds.garudalinux.org/repos/chaotic-aur (uncomment line 7 for this)
 
 --------------------------------------------------------------------
 - [Installation methods](#installation-methods)
@@ -31,38 +29,25 @@ To obtain the script you can run multiple methods, the main three are:
  3. [Using your favourite AUR helper](#3-arch-user-repository-aur)
 
 ### 1. "AM" APPLICATION MANAGER
-I recommend using "[AM" Application Manager](https://github.com/ivan-hc/AM-application-manager)", because it can easilly keep you updated with the latest version of all the programs managed, and without root permissions ("sudo" is needed only to install/remove the programs):
-   - TO INSTALL ARCH-DEPLOYER
-    
-         sudo am -i arch-deployer
-   - TO UPDATE IT (without "sudo", this command will also update other programs managed by "AM")
-    
-         am -u
-   - TO REMOVE IT:
-   
-         sudo am -r arch-deployer     
+I recommend using "[AM" Application Manager](https://github.com/ivan-hc/AM-application-manager)", because it can easilly keep you updated with the latest version of all the programs managed, and without root permissions:
+```
+am -i arch-deployer
+```
+
 ### 2. WGET THE SCRIPT DIRECTLY
 You can obtain and run the script locally, this way:
-   
-       wget https://raw.githubusercontent.com/ivan-hc/Arch-Deployer/main/arch-deployer
-       chmod a+x ./arch-deployer
-Perform the same commands periodically to get the latest versio of this script.
+```
+wget -q https://raw.githubusercontent.com/ivan-hc/Arch-Deployer/main/arch-deployer && chmod a+x ./arch-deployer
+```
 
 ### 3. ARCH USER REPOSITORY (AUR)
-Using our favorite AUR helper, ie
-    
-         paru -S arch-deployer-git
-
+Using an AUR helper, for example
+```
+paru -S arch-deployer-git
+```
 NOTE: I'm not the maintainer of any AUR script.
 
 # Related projects
-##### Sources and tools
-- libunionpreload from https://github.com/project-portable/libunionpreload
-- appimagetool from https://github.com/AppImage/AppImageKit
+- **Archimage**, at https://github.com/ivan-hc/ArchImage, alternative to Arch-Deployer
+- "**AM**", the package manager for AppImages and portable apps for GNU/Linux
 
-##### This project is heavily inspired by
-- pkg2appimage, at https://github.com/AppImage/pkg2appimage
-
-### Arch-Deployer is part of "AM"
-the multi-architecture Application Manager for any GNU/Linux distribution, find out more at
-# [github.com/ivan-hc/AM-application-manager](https://github.com/ivan-hc/AM-application-manager)
