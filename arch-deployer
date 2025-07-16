@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 
-AD_VERSION="1.6.2"
+AD_VERSION="1.7.0"
 
 export ARCH=$(uname -m)
 MIRROR="https://archlinux.org/packages"
-CHAOTICAUR="https://builds.garudalinux.org/repos/chaotic-aur/" # UNCOMMENT TO ENABLE THE SUPPORT FOR AUR PACKAGES (CHAOTIC AUR)
 
 # XDG Variables
 SCRIPTDIR="${SCRIPTDIR:-$(xdg-user-dir DESKTOP 2>/dev/null)}"
@@ -74,6 +73,10 @@ SEE ALSO:
 	https://github.com/ivan-hc/AM 
 "
 
+################################################################################################################################################################
+#				CORE APPIMAGE UTILITIES
+################################################################################################################################################################
+
 _appimagetool() {
 	if ! command -v appimagetool 1>/dev/null; then
 		[ ! -f ./appimagetool ] && echo " Downloading appimagetool..." && curl -#Lo appimagetool https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-"$ARCH".AppImage && chmod a+x ./appimagetool
@@ -82,10 +85,6 @@ _appimagetool() {
 		appimagetool "$@"
 	fi
 }
-
-################################################################################################################################################################
-#				CORE APPIMAGE UTILITIES
-################################################################################################################################################################
 
 _create_apprun() {
 	rm -f AppRun
@@ -133,6 +132,31 @@ _create_apprun() {
 	sed -i "s/SAMPLE/$BIN/g" AppRun
 }
 
+_download_and_extract_dependencies() {
+	ARGS=$(cat ./DEP)
+	for pkg in ${ARGS} ; do
+		for REPO in core extra community multilib; do
+			$use_torsocks wget -q --no-verbose --show-progress --progress=bar "${MIRROR}/${REPO}/${ARCH}/$pkg/download" --trust-server-names
+		done
+		if ! test -f "$pkg"-*.tar.zst; then
+			[ -z "$CHAOTICAUR" ] && CHAOTICAUR=$(curl -Ls "https://builds.garudalinux.org/repos/chaotic-aur/${ARCH}" | tr '">< ' '\n' | grep "tar.zst$" | uniq)
+			chaotic_pkg=$(echo "$CHAOTICAUR" | grep "^$pkg-[0-9].*.tar.zst$" 2>/dev/null | head -1)
+			[ -n "$chaotic_pkg" ] && wget -q --no-verbose --show-progress --progress=bar "https://cf-builds.garudalinux.org/repos/chaotic-aur/${ARCH}/$chaotic_pkg"
+			unset chaotic_pkg
+		fi
+	done
+	for f in *.tar.zst; do 
+		tar xf "$f" 2>/dev/null
+	done
+	mkdir -p ./"$APP".AppDir
+	_DIVIDING_LINE
+	dirs="bin boot dev etc lib lib64 libx32 lib32 media mnt opt proc run sbin srv sys tmp usr var"
+	for d in $dirs; do
+		[ -d ./"$d" ] && rsync -av ./"$d" ./"$APP".AppDir/ 2>/dev/null | echo "◆ Rsync /$d content to $APP.AppDir"
+	done
+	_DIVIDING_LINE
+}
+
 ################################################################################################################################################################
 #				USAGE
 ################################################################################################################################################################
@@ -154,7 +178,7 @@ case "$1" in
 		_online_check
 
 		# Name the executable in /usr/bin if different from the appname
-		read -r -ep "◆ NAME THE MAIN EXECUTABLE IN \$PATH, OR LEAVE BLANK IF IT IS THE SAME: " BIN
+		read -r -ep "◆ Name the main executable in \$PATH, or leave blank if it is the same: " BIN
     		[ -z "$BIN" ] && BIN="$APP"
 
 		if [ -d ./"$APP"/"$APP".AppDir ]; then
@@ -168,11 +192,18 @@ case "$1" in
 				$use_torsocks wget -q --no-verbose --show-progress --progress=bar "${MIRROR}/${REPO}/${ARCH}/$APP/download" --trust-server-names
 			done
 			if ! test -f "$APP"-*.tar.zst; then
-				wget -r -A "$APP"-*.tar.zst -nd "${CHAOTICAUR}"/"${ARCH}"/
+				CHAOTICAUR=$(curl -Ls "https://builds.garudalinux.org/repos/chaotic-aur/${ARCH}" | tr '">< ' '\n' | grep "tar.zst$" | uniq)
+				chaotic_pkg=$(echo "$CHAOTICAUR" | grep "^$APP-[0-9].*.tar.zst$" 2>/dev/null | head -1)
+				wget -q --no-verbose --show-progress --progress=bar "https://cf-builds.garudalinux.org/repos/chaotic-aur/${ARCH}/$chaotic_pkg"
+				unset chaotic_pkg
 			fi
-			tar xf ./*.tar.zst
+			if ! test -f "$APP"-*.tar.zst; then
+				printf " 💀 ERROR: no main package found for %b. Exiting.\n" "$APP" && exit 0
+			else
+				tar xf ./*.tar.zst
+			fi
 
-			# READ AND/OR EDIT THE DEPENDENCES LIST
+			# READ AND/OR EDIT THE DEPENDENCIES LIST
 			DEP=$(cat ./.PKGINFO | grep "^depend = " | sed 's/depend = //g' | sed 's/=.*//')
 			VERSION=$(cat ./.PKGINFO | grep pkgver | cut -c 10- | sed 's@.*:@@')
 			echo "$DEP" | tr ' ' '\n' | sort >> DEP
@@ -180,46 +211,24 @@ case "$1" in
 			cat DEP
 			_DIVIDING_LINE
 			while true; do
-				read -r -p " DO YOU WISH TO ADD OTHER PACKAGES TO THE LIST (y/N)?" response
+				read -r -p " Do you wish to add other packages to the list (y/N)?" response
 				if echo "$response" | grep -qi "^y"; then
-					printf " OPENING THE \"DEP\" FILE USING YOUR DEFAULT TEXT EDITOR\n\n"
-					xdg-open DEP
-					while true; do
-						read -r -p  " PRESS ENTER TO CONTINUE" response
-						case $response in
-						*)
-							printf "\n THE FOLLOWING PACKAGES WILL BE DOWNLOADED:\n\n%b\n" "$(cat DEP)"
-							break
-						esac
-					done
+					read -r -ep " Please enter the package names: " packages
+					if [ -n "$packages" ]; then
+						echo "$packages" | tr ' ' '\n' >> DEP
+						sort DEP > DEP.new && mv DEP.new DEP
+					fi
+					printf "\n THE FOLLOWING PACKAGES WILL BE DOWNLOADED:\n\n%b\n\n" "$(cat DEP)"
+					unset packages
+					break
 				else
 					printf "\n OK, LET'S GO! \n\n"
 					break
 				fi
 			done
 
-			# DOWNLOAD AND EXTRACT THE DEPENDENCE'S PACKAGES TO THE APPDIR
-			ARGS=$(cat ./DEP)
-			for pkg in ${ARGS} ; do
-				for REPO in core extra community multilib; do
-					$use_torsocks wget -q --no-verbose --show-progress --progress=bar "${MIRROR}/${REPO}/${ARCH}/$pkg/download" --trust-server-names
-				done
-				if ! test -f "$pkg"-*.tar.zst; then
-					wget -r -A "$pkg"-*.tar.zst -nd "${CHAOTICAUR}"/"${ARCH}"/
-				fi
-			done
-			
-			for f in *.tar.zst; do 
-				tar xf "$f" 2>/dev/null
-			done
-			mkdir -p ./"$APP".AppDir
-			dirs="bin boot dev etc lib lib64 libx32 lib32 media mnt opt proc run sbin srv sys tmp usr var"
-			for d in $dirs; do
-				mv ./"$d" ./"$APP".AppDir/ 2>/dev/null
-			done
-
-			# DOWNLOADING APPIMAGETOOL (TO EXPORT THE APPDIR TO AN APPIMAGE)
-			_appimagetool
+			# DOWNLOAD AND EXTRACT THE DEPENDENCIES TO THE APPDIR
+			_download_and_extract_dependencies
 
 			# CREATING THE APPRUN SCRIPT
 			_create_apprun
@@ -243,8 +252,10 @@ case "$1" in
 			cp -r ./"$APP".AppDir/usr/share/icons/hicolor/512x512/apps/*"$ICON"* "$APP".AppDir/ 2>/dev/null
 			cp -r ./"$APP".AppDir/usr/share/icons/hicolor/scalable/apps/*"$ICON"* "$APP".AppDir/ 2>/dev/null
 			cp -r ./"$APP".AppDir/usr/share/pixmaps/*"$ICON"* "$APP".AppDir/ 2>/dev/null
+			if [ ! -f "$ICON".png ] || [ ! -f "$ICON".svg ]; then
+				touch "$APP".AppDir/"$ICON".png
+			fi
 			cd ..
-			_DIVIDING_LINE
 			echo " The $APP.AppDir is ready!"
 			echo " You may check it for issues to fix before you export it to an AppImage."
 			sleep 2
@@ -254,8 +265,8 @@ case "$1" in
 
 	# CHECK THE APPDIR (QUESTION)
 	while true; do
-		read -r -p  " DO YOU WISH TO CHECK THE $APP.AppDir FIRST (Y/n)?" response
-		if ! echo "$response" | grep -qi "^n"; then
+		read -r -p  " Do you wish to check the $APP.AppDir first (y/N)?" response
+		if echo "$response" | grep -qi "^y"; then
 			_DIVIDING_LINE
 			echo " Opening the $APP.AppDir directory!"
 			sleep 1
@@ -269,32 +280,27 @@ case "$1" in
 		fi
 	done
 
-	# DOWNLOAD OTHER PACKAGES (IF NEEDED)
+	# FINAL STEPS
 	while true; do
-		read -r -p  " DO YOU WISH TO ADD OTHER PACKAGES (Y,n)?" response
-		if ! echo "$response" | grep -qi "^n"; then
-			while true; do
-				read -r -p " PLEASE, ENTER THE PACKAGE NAME (or leave empty to continue): " packagename
-				if [ -n "$packagename" ]; then
-					for pkg in $packagename; do
-						chmod -R 777 ./"$APP"/"$APP".AppDir
-						cd ./"$APP"/"$APP".AppDir || exit 1
-						for REPO in core extra community multilib; do
-							$use_torsocks wget -q --no-verbose --show-progress --progress=bar "${MIRROR}/${REPO}/${ARCH}/$pkg/download" --trust-server-names
-						done
-						if ! test -f "$pkg"-*.tar.zst; then
-							wget -r -A "$pkg"-*.tar.zst -nd "${CHAOTICAUR}"/"${ARCH}"/
-						fi
-						tar xf "$packagename".tar.zst
-						chmod -R 777 ./*
-						rm -f ./2 ./.* ./*.tar.zst
-						printf "\n"
-					done
-				else
-					break
+		# DOWNLOAD OTHER PACKAGES (IF NEEDED)
+		while true; do
+			read -r -p " Do you wish to add other packages to the list (y/N)?" response
+			if echo "$response" | grep -qi "^y"; then
+				cd ./"$APP" || exit 1
+				read -r -ep " Please enter the package names: " packages
+				if [ -n "$packages" ]; then
+					echo "$packages" | tr ' ' '\n' > DEP
+					printf "\n THE FOLLOWING NEW PACKAGES WILL BE DOWNLOADED:\n\n%b\n\n" "$(cat DEP)"
+					unset packages
+					_download_and_extract_dependencies
 				fi
-			done
-		fi
+				cd ..
+				break
+			else
+				printf "\n OK, LET'S GO! \n\n"
+				break
+			fi
+		done
 
 		# EXPORT THE APPDIR TO AN APPIMAGE
 		while true; do
@@ -304,14 +310,18 @@ case "$1" in
 				_appimagetool -n ./"$APP"/"$APP".AppDir 2>/dev/null
 				mv ./*.AppImage "$SCRIPTDIR"/"$APPNAME"_"$VERSION"-archdelpoyer"$AD_VERSION"-"$ARCH".AppImage 2>/dev/null
 				_DIVIDING_LINE
-				printf " $APP has been exported on your desktop! \n\n Repeat this operation in case the AppImage doesn't work:\n\n" "$APP"
+				printf " %b has been exported to %b! \n\n Repeat this operation in case the AppImage doesn't work:\n" "$APP" "$DATADIR"
+				_DIVIDING_LINE
+				break
 			else
+				THE_END="1"
 				break
 			fi
 		done
-		_DIVIDING_LINE
-		printf " THANK YOU FOR USING ARCH-DEPLOYER! \n\n Please consider submitting your application to \"AM\"\n\n SITE: https://github.com/ivan-hc/AM\n\n"
-		echo "############################################################################"
-		exit 0
+		[ -n "$THE_END" ] && break
 	done
+	_DIVIDING_LINE
+	printf " THANK YOU FOR USING ARCH-DEPLOYER! \n\n Please consider submitting your application to \"AM\"\n\n SITE: https://github.com/ivan-hc/AM\n\n"
+	echo "############################################################################"
+	exit 0
 esac
