@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-AD_VERSION="1.6.0"
+AD_VERSION="1.6.1"
 
 ARCH=$(uname -m)
 MIRROR="https://archlinux.org/packages"
@@ -105,16 +105,13 @@ _create_apprun() {
 		export QT_PLUGIN_PATH="${HERE}"/usr/lib/"$QTVER"/plugins/:"${HERE}"/usr/lib/x86_64-linux-gnu/"$QTVER"/plugins/:"${HERE}"/usr/lib64/"$QTVER"/plugins/:"${HERE}"/lib/"$QTVER"/plugins/:"${HERE}"/lib64/"$QTVER"/plugins/:"${QT_PLUGIN_PATH}"
 	fi
 
-	EXEC=$(grep -e '^Exec=.*' "${HERE}"/*.desktop | head -n 1 | cut -d "=" -f 2- | sed -e 's|%.||g')
-
-	if [ ! -f "${HERE}"/usr/bin/"$EXEC" ]; then
-		if [ -f "${HERE}"/usr/lib/SAMPLE/SAMPLE ]; then
-			exec "${HERE}"/usr/lib/SAMPLE/SAMPLE "$@"
-		else
-			echo "No binary found in \$PATH"
-		fi
+	APP=SAMPLE
+	if [ -f "${HERE}"/usr/lib/"$APP"/"$APP" ]; then
+		exec "${HERE}"/usr/lib/"$APP"/"$APP" "$@"
+	elif [ -f "${HERE}"/usr/bin/"$APP" ]; then
+		exec "${HERE}"/usr/bin/"$APP" "$@"
 	else
-		exec "${HERE}"/usr/bin/"$EXEC" "$@"
+		echo "No binary found in \$PATH"
 	fi
 	HEREDOC
 	chmod a+x AppRun
@@ -264,23 +261,7 @@ case "$1" in
 	# DOWNLOAD OTHER PACKAGES (IF NEEDED)
 	while true; do
 		read -r -p  " DO YOU WISH TO ADD OTHER PACKAGES (Y,n)?" response
-		if echo "$response" | grep -qi "^n"; then
-			while true; do
-				read -r -p  " Do you wish to export $APP.AppDir to an AppImage (Y/n)?" response
-				if ! echo "$response" | grep -qi "^n"; then
-					echo ""
-					ARCH=$(uname -m) _appimagetool -n ./"$APP"/"$APP".AppDir 2>/dev/null
-					mv ./*.AppImage "$(xdg-user-dir DESKTOP)" 2>/dev/null
-					_DIVIDING_LINE
-					echo " $APP has been exported on your desktop!"
-					echo ""
-					echo " Repeat this operation in case the AppImage doesn't work:"
-					echo ""
-				else
-					break
-				fi
-			done
-		else
+		if ! echo "$response" | grep -qi "^n"; then
 			while true; do
 				read -r -p " PLEASE, ENTER THE PACKAGE NAME (or leave empty to continue): " packagename
 				if [ -n "$packagename" ]; then
@@ -316,6 +297,8 @@ case "$1" in
 				echo ""
 				echo " Repeat this operation in case the AppImage doesn't work:"
 				echo ""
+			else
+				break
 			fi
 		done
 		_DIVIDING_LINE
