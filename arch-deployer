@@ -1,19 +1,26 @@
 #!/usr/bin/env bash
 
-AD_VERSION="1.6.1"
+AD_VERSION="1.6.2"
 
-ARCH=$(uname -m)
+export ARCH=$(uname -m)
 MIRROR="https://archlinux.org/packages"
 CHAOTICAUR="https://builds.garudalinux.org/repos/chaotic-aur/" # UNCOMMENT TO ENABLE THE SUPPORT FOR AUR PACKAGES (CHAOTIC AUR)
 
+# XDG Variables
+SCRIPTDIR="${SCRIPTDIR:-$(xdg-user-dir DESKTOP 2>/dev/null)}"
+[ -d "$SCRIPTDIR" ] || SCRIPTDIR="$PWD"
+
+# Dividing line
 _DIVIDING_LINE() {
 	printf "\n############################################################################\n\n"
 }
 
+# Fit texts to an acceptable width
 _fit() {
 	command -v tput >/dev/null 2>&1 && fold -sw "$(("$(tput cols)"-"3"))" | sed 's/^/ /g' || fold -sw 77 | sed 's/^/ /g'
 }
 
+# Function to check online connections (uses archlinux.org by default, as the core packages are stored/hosted there)
 _online_check() {
 	if ! wget -q --tries=10 --timeout=20 --spider https://archlinux.org/; then
 		if command -v torsocks >/dev/null 2>&1; then
@@ -29,6 +36,10 @@ _online_check() {
 		fi
 	fi
 }
+
+################################################################################################################################################################
+#				HELP
+################################################################################################################################################################
 
 HELP_MESSAGE_HEADER="
 
@@ -71,6 +82,10 @@ _appimagetool() {
 		appimagetool "$@"
 	fi
 }
+
+################################################################################################################################################################
+#				CORE APPIMAGE UTILITIES
+################################################################################################################################################################
 
 _create_apprun() {
 	rm -f AppRun
@@ -118,18 +133,22 @@ _create_apprun() {
 	sed -i "s/SAMPLE/$BIN/g" AppRun
 }
 
+################################################################################################################################################################
+#				USAGE
+################################################################################################################################################################
+
 case "$1" in
-	-h|--help )
+	'help'|'-h')
 		echo "$HELP_MESSAGE_HEADER"
 		echo "$HELP_MESSAGE" | _fit
 		;;
-	-v|--version )
+	'version'|'-v'|'--version')
 		echo "$AD_VERSION"
 		;;
-	'' )
+	'')
 		printf "\nPlease add the name of a program from the arch linux repositories\n\nUSAGE:     arch-deployer \$PROGRAM\n\n" | _fit
 		;;
-	* )
+	*)
 		APP="$1"
 
 		_online_check
@@ -154,40 +173,33 @@ case "$1" in
 			tar xf ./*.tar.zst
 
 			# READ AND/OR EDIT THE DEPENDENCES LIST
-			DEP=$( cat ./.PKGINFO | grep "^depend = " | sed 's/depend = //g' | sed 's/=.*//' )
+			DEP=$(cat ./.PKGINFO | grep "^depend = " | sed 's/depend = //g' | sed 's/=.*//')
+			VERSION=$(cat ./.PKGINFO | grep pkgver | cut -c 10- | sed 's@.*:@@')
 			echo "$DEP" | tr ' ' '\n' | sort >> DEP
-			echo ""
+			printf "\n"
 			cat DEP
 			_DIVIDING_LINE
 			while true; do
 				read -r -p " DO YOU WISH TO ADD OTHER PACKAGES TO THE LIST (y/N)?" response
 				if echo "$response" | grep -qi "^y"; then
-					echo ""
-					echo ' OPENING THE "DEP" FILE USING YOUR DEFAULT TEXT EDITOR'
+					printf " OPENING THE \"DEP\" FILE USING YOUR DEFAULT TEXT EDITOR\n\n"
 					xdg-open DEP
-					echo ""
 					while true; do
 						read -r -p  " PRESS ENTER TO CONTINUE" response
 						case $response in
-						* )
-							echo ""
-							echo " THE FOLLOWING PACKAGES WILL BE DOWNLOADED:"
-							echo ""
-							cat DEP
-							echo ""
+						*)
+							printf "\n THE FOLLOWING PACKAGES WILL BE DOWNLOADED:\n\n%b\n" "$(cat DEP)"
 							break
 						esac
 					done
 				else
-					echo ""
-					echo " OK, LET'S GO!"
-					echo ""
+					printf "\n OK, LET'S GO! \n\n"
 					break
 				fi
 			done
 
 			# DOWNLOAD AND EXTRACT THE DEPENDENCE'S PACKAGES TO THE APPDIR
-			ARGS=$( cat ./DEP )
+			ARGS=$(cat ./DEP)
 			for pkg in ${ARGS} ; do
 				for REPO in core extra community multilib; do
 					$use_torsocks wget -q --no-verbose --show-progress --progress=bar "${MIRROR}/${REPO}/${ARCH}/$pkg/download" --trust-server-names
@@ -215,6 +227,7 @@ case "$1" in
 
 			# TRY TO COPY ICON AND LAUNCHER INTO THE APPDIR
 			LAUNCHER=$(grep -iRl "$BIN" ./"$APP".AppDir/usr/share/applications/* | grep ".desktop" | head -1)
+			APPNAME=$(cat "$LAUNCHER" | grep 'Name=' | head -1 | cut -c 6- | sed 's/ /-/g')
 			cp -r "$LAUNCHER" "$APP".AppDir/
 			ICON=$(cat "$LAUNCHER" | grep "Icon=" | cut -c 6-)
 			[ -z "$ICON" ] && ICON="$BIN"
@@ -233,11 +246,10 @@ case "$1" in
 			cd ..
 			_DIVIDING_LINE
 			echo " The $APP.AppDir is ready!"
-			echo ' You may check it for issues to fix before you export it to an AppImage.'
+			echo " You may check it for issues to fix before you export it to an AppImage."
 			sleep 2
 			_DIVIDING_LINE
 		fi
-	echo "" 
 	sleep 1
 
 	# CHECK THE APPDIR (QUESTION)
@@ -247,11 +259,10 @@ case "$1" in
 			_DIVIDING_LINE
 			echo " Opening the $APP.AppDir directory!"
 			sleep 1
-			echo ""
-			echo " Exec the AppRun (command './AppRun') to test if everything works!"
+			printf "\n Exec the AppRun (command './AppRun') to test if everything works! \n"
 			sleep 1
 			xdg-open ./"$APP"/"$APP".AppDir
-			echo ""
+			printf "\n"
 			break
 		else
 			break
@@ -277,7 +288,7 @@ case "$1" in
 						tar xf "$packagename".tar.zst
 						chmod -R 777 ./*
 						rm -f ./2 ./.* ./*.tar.zst
-						echo ""
+						printf "\n"
 					done
 				else
 					break
@@ -289,26 +300,18 @@ case "$1" in
 		while true; do
 			read -r -p  " Do you wish to export $APP.AppDir to an AppImage (Y/n)?" response
 			if ! echo "$response" | grep -qi "^n"; then
-				echo ""
-				ARCH=$(uname -m) _appimagetool -n ./"$APP"/"$APP".AppDir 2>/dev/null
-				mv ./*.AppImage "$(xdg-user-dir DESKTOP)" 2>/dev/null
+				printf "\n"
+				_appimagetool -n ./"$APP"/"$APP".AppDir 2>/dev/null
+				mv ./*.AppImage "$SCRIPTDIR"/"$APPNAME"_"$VERSION"-archdelpoyer"$AD_VERSION"-"$ARCH".AppImage 2>/dev/null
 				_DIVIDING_LINE
-				echo " $APP has been exported on your desktop!"
-				echo ""
-				echo " Repeat this operation in case the AppImage doesn't work:"
-				echo ""
+				printf " $APP has been exported on your desktop! \n\n Repeat this operation in case the AppImage doesn't work:\n\n" "$APP"
 			else
 				break
 			fi
 		done
 		_DIVIDING_LINE
-		echo '  THANK YOU FOR USING ARCH-DEPLOYER!'
-		echo ""
-		echo "  Please consider submitting your application to \"AM\""
-		echo ""
-		echo "  SITE: https://github.com/ivan-hc/AM"
-		echo ""
+		printf " THANK YOU FOR USING ARCH-DEPLOYER! \n\n Please consider submitting your application to \"AM\"\n\n SITE: https://github.com/ivan-hc/AM\n\n"
 		echo "############################################################################"
-		exit 
+		exit 0
 	done
 esac
