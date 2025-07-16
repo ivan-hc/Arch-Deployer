@@ -320,7 +320,7 @@ case "$1" in
 				;;
 			[Yy]*|* )
 				echo ""
-				ARCH=$(uname -m) ./"$APP"/appimagetool -n ./"$APP"/"$APP".AppDir 2>/dev/null
+				ARCH=$(uname -m) _appimagetool -n ./"$APP"/"$APP".AppDir 2>/dev/null
 				mv ./*.AppImage "$(xdg-user-dir DESKTOP)" 2>/dev/null
 				_DIVIDING_LINE
 				echo " $APP has been exported on your desktop!"
