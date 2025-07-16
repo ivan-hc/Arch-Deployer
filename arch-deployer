@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-AD_VERSION="1.5.0"
+AD_VERSION="1.6.0"
 
 ARCH=$(uname -m)
 MIRROR="https://archlinux.org/packages"
-#CHAOTICAUR="https://builds.garudalinux.org/repos/chaotic-aur/" # UNCOMMENT TO ENABLE THE SUPPORT FOR AUR PACKAGES (CHAOTIC AUR)
+CHAOTICAUR="https://builds.garudalinux.org/repos/chaotic-aur/" # UNCOMMENT TO ENABLE THE SUPPORT FOR AUR PACKAGES (CHAOTIC AUR)
 
 _DIVIDING_LINE() {
 	printf "\n############################################################################\n\n"
@@ -12,6 +12,22 @@ _DIVIDING_LINE() {
 
 _fit() {
 	command -v tput >/dev/null 2>&1 && fold -sw "$(("$(tput cols)"-"3"))" | sed 's/^/ /g' || fold -sw 77 | sed 's/^/ /g'
+}
+
+_online_check() {
+	if ! wget -q --tries=10 --timeout=20 --spider https://archlinux.org/; then
+		if command -v torsocks >/dev/null 2>&1; then
+			if ! torsocks wget -q --tries=10 --timeout=20 --spider https://archlinux.org/; then
+				printf "\n https://archlinux.org is offline, please check your internet connection and try again\n\n" | _fit
+				exit 0
+			else
+				use_torsocks="torsocks"
+			fi
+		else
+			printf "\n https://archlinux.org is offline, please check your internet connection and try again\n\n" | _fit
+			exit 0
+		fi
+	fi
 }
 
 HELP_MESSAGE_HEADER="
@@ -90,9 +106,19 @@ _create_apprun() {
 	fi
 
 	EXEC=$(grep -e '^Exec=.*' "${HERE}"/*.desktop | head -n 1 | cut -d "=" -f 2- | sed -e 's|%.||g')
-	exec ${EXEC} "$@"
+
+	if [ ! -f "${HERE}"/usr/bin/"$EXEC" ]; then
+		if [ -f "${HERE}"/usr/lib/SAMPLE/SAMPLE ]; then
+			exec "${HERE}"/usr/lib/SAMPLE/SAMPLE "$@"
+		else
+			echo "No binary found in \$PATH"
+		fi
+	else
+		exec "${HERE}"/usr/bin/"$EXEC" "$@"
+	fi
 	HEREDOC
 	chmod a+x AppRun
+	sed -i "s/SAMPLE/$BIN/g" AppRun
 }
 
 case "$1" in
@@ -104,15 +130,12 @@ case "$1" in
 		echo "$AD_VERSION"
 		;;
 	'' )
-		echo ""
-		echo '  Please add the name of a program from the arch linux repositories'
-		echo ""
-		echo "  USAGE:     arch-deployer PROGRAM"
-		echo ""
-		echo ""
+		printf "\nPlease add the name of a program from the arch linux repositories\n\nUSAGE:     arch-deployer \$PROGRAM\n\n" | _fit
 		;;
 	* )
 		APP="$1"
+
+		_online_check
 
 		# Name the executable in /usr/bin if different from the appname
 		read -r -ep "◆ NAME THE MAIN EXECUTABLE IN \$PATH, OR LEAVE BLANK IF IT IS THE SAME: " BIN
@@ -124,12 +147,14 @@ case "$1" in
 			sleep 2
 		else
 			# DOWNLOADING THE APPLICATION
-			mkdir -p ./"$1" && cd ./"$1" || exit 1
+			mkdir -p ./"$APP" && cd ./"$APP" || exit 1
 			for REPO in core extra community multilib; do
-				wget -q --no-verbose --show-progress --progress=bar "${MIRROR}/${REPO}/${ARCH}/$APP/download" && mv ./download ./"$APP".tar.zst
-				wget -r -A "$APP"-*.tar.zst -nd "${CHAOTICAUR}"/"${ARCH}"/ && break
+				$use_torsocks wget -q --no-verbose --show-progress --progress=bar "${MIRROR}/${REPO}/${ARCH}/$APP/download" --trust-server-names
 			done
-			tar fx ./*.tar.zst
+			if ! test -f "$APP"-*.tar.zst; then
+				wget -r -A "$APP"-*.tar.zst -nd "${CHAOTICAUR}"/"${ARCH}"/
+			fi
+			tar xf ./*.tar.zst
 
 			# READ AND/OR EDIT THE DEPENDENCES LIST
 			DEP=$( cat ./.PKGINFO | grep "^depend = " | sed 's/depend = //g' | sed 's/=.*//' )
@@ -139,8 +164,7 @@ case "$1" in
 			_DIVIDING_LINE
 			while true; do
 				read -r -p " DO YOU WISH TO ADD OTHER PACKAGES TO THE LIST (y/N)?" response
-				case $response in
-				[Yy]* )
+				if echo "$response" | grep -qi "^y"; then
 					echo ""
 					echo ' OPENING THE "DEP" FILE USING YOUR DEFAULT TEXT EDITOR'
 					xdg-open DEP
@@ -157,46 +181,33 @@ case "$1" in
 							break
 						esac
 					done
-					;;
-				[Nn]*|* )
+				else
 					echo ""
 					echo " OK, LET'S GO!"
 					echo ""
 					break
-					;;
-				esac
+				fi
 			done
 
 			# DOWNLOAD AND EXTRACT THE DEPENDENCE'S PACKAGES TO THE APPDIR
 			ARGS=$( cat ./DEP )
-			for DEPENDENCES in ${ARGS} ; do
+			for pkg in ${ARGS} ; do
 				for REPO in core extra community multilib; do
-					wget -q --no-verbose --show-progress --progress=bar "${MIRROR}/${REPO}/${ARCH}/$DEPENDENCES/download" && mv ./download ./"$DEPENDENCES".tar.zst
-					wget -r -A "$DEPENDENCES"-*.tar.zst -nd "${CHAOTICAUR}"/"${ARCH}"/ && break
+					$use_torsocks wget -q --no-verbose --show-progress --progress=bar "${MIRROR}/${REPO}/${ARCH}/$pkg/download" --trust-server-names
 				done
+				if ! test -f "$pkg"-*.tar.zst; then
+					wget -r -A "$pkg"-*.tar.zst -nd "${CHAOTICAUR}"/"${ARCH}"/
+				fi
 			done
+			
 			for f in *.tar.zst; do 
-				tar xf "$f"
+				tar xf "$f" 2>/dev/null
 			done
 			mkdir -p ./"$APP".AppDir
-			mv ./bin ./"$APP".AppDir/ 2>/dev/null
-			mv ./boot ./"$APP".AppDir/ 2>/dev/null
-			mv ./dev ./"$APP".AppDir/ 2>/dev/null
-			mv ./etc ./"$APP".AppDir/ 2>/dev/null
-			mv ./lib ./"$APP".AppDir/ 2>/dev/null
-			mv ./lib64 ./"$APP".AppDir/ 2>/dev/null
-			mv ./libx32 ./"$APP".AppDir/ 2>/dev/null
-			mv ./media ./"$APP".AppDir/ 2>/dev/null
-			mv ./mnt ./"$APP".AppDir/ 2>/dev/null
-			mv ./opt ./"$APP".AppDir/ 2>/dev/null
-			mv ./proc ./"$APP".AppDir/ 2>/dev/null
-			mv ./run ./"$APP".AppDir/ 2>/dev/null
-			mv ./sbin ./"$APP".AppDir/ 2>/dev/null
-			mv ./srv ./"$APP".AppDir/ 2>/dev/null
-			mv ./sys ./"$APP".AppDir/ 2>/dev/null
-			mv ./tmp ./"$APP".AppDir/ 2>/dev/null
-			mv ./usr ./"$APP".AppDir/ 2>/dev/null
-			mv ./var ./"$APP".AppDir/ 2>/dev/null
+			dirs="bin boot dev etc lib lib64 libx32 lib32 media mnt opt proc run sbin srv sys tmp usr var"
+			for d in $dirs; do
+				mv ./"$d" ./"$APP".AppDir/ 2>/dev/null
+			done
 
 			# DOWNLOADING APPIMAGETOOL (TO EXPORT THE APPDIR TO AN APPIMAGE)
 			_appimagetool
@@ -224,7 +235,6 @@ case "$1" in
 			cp -r ./"$APP".AppDir/usr/share/pixmaps/*"$ICON"* "$APP".AppDir/ 2>/dev/null
 			cd ..
 			_DIVIDING_LINE
-			echo ""
 			echo " The $APP.AppDir is ready!"
 			echo ' You may check it for issues to fix before you export it to an AppImage.'
 			sleep 2
@@ -236,11 +246,7 @@ case "$1" in
 	# CHECK THE APPDIR (QUESTION)
 	while true; do
 		read -r -p  " DO YOU WISH TO CHECK THE $APP.AppDir FIRST (Y/n)?" response
-		case $response in
-		[Nn]* )
-			break
-			;;
-		[Yy]*|* )
+		if ! echo "$response" | grep -qi "^n"; then
 			_DIVIDING_LINE
 			echo " Opening the $APP.AppDir directory!"
 			sleep 1
@@ -250,98 +256,76 @@ case "$1" in
 			xdg-open ./"$APP"/"$APP".AppDir
 			echo ""
 			break
-			;;
-		esac
+		else
+			break
+		fi
 	done
 
 	# DOWNLOAD OTHER PACKAGES (IF NEEDED)
 	while true; do
 		read -r -p  " DO YOU WISH TO ADD OTHER PACKAGES (Y,n)?" response
-		case $response in
-		[Nn]*)
+		if echo "$response" | grep -qi "^n"; then
 			while true; do
-				read -r -p  " DO YOU WISH TO EXPORT THE $APP.AppDir TO AN APPIMAGE (Y/n)?" response
-				case $response in
-				[Nn]*)
-					_DIVIDING_LINE
-					echo "  THANK YOU FOR USING ARCH-DEPLOYER!"
-					echo ""
-					echo "  SITE: https://github.com/ivan-hc/AM"
-					_DIVIDING_LINE
-					exit;;
-				[Yy]*|*)
+				read -r -p  " Do you wish to export $APP.AppDir to an AppImage (Y/n)?" response
+				if ! echo "$response" | grep -qi "^n"; then
 					echo ""
 					ARCH=$(uname -m) _appimagetool -n ./"$APP"/"$APP".AppDir 2>/dev/null
 					mv ./*.AppImage "$(xdg-user-dir DESKTOP)" 2>/dev/null
 					_DIVIDING_LINE
-					echo " $APP HAS BEEN EXPORTED ON YOUR DESKTOP!"
-					sleep 2
+					echo " $APP has been exported on your desktop!"
 					echo ""
-					echo " Repeat this operation in case the appimage doesn't work:"
-					sleep 1
+					echo " Repeat this operation in case the AppImage doesn't work:"
 					echo ""
-					;;
-				esac
-			done
-			exit
-			;;
-		[Yy]*|* )
-			while true; do
-				read -r -p  " PLEASE, ENTER THE PACKAGE NAME (or leave empty to continue): " packagename
-				case $packagename in
-				'')
+				else
 					break
-					;;
-				*)
-					for var in $packagename; do
+				fi
+			done
+		else
+			while true; do
+				read -r -p " PLEASE, ENTER THE PACKAGE NAME (or leave empty to continue): " packagename
+				if [ -n "$packagename" ]; then
+					for pkg in $packagename; do
 						chmod -R 777 ./"$APP"/"$APP".AppDir
 						cd ./"$APP"/"$APP".AppDir || exit 1
 						for REPO in core extra community multilib; do
-							wget -q --no-verbose --show-progress --progress=bar "${MIRROR}/${REPO}/${ARCH}/$var/download" && mv ./download ./"$var".tar.zst
-							wget -r -A "$var"-*.tar.zst -nd "${CHAOTICAUR}"/"${ARCH}"/ && break
+							$use_torsocks wget -q --no-verbose --show-progress --progress=bar "${MIRROR}/${REPO}/${ARCH}/$pkg/download" --trust-server-names
 						done
+						if ! test -f "$pkg"-*.tar.zst; then
+							wget -r -A "$pkg"-*.tar.zst -nd "${CHAOTICAUR}"/"${ARCH}"/
+						fi
 						tar xf "$packagename".tar.zst
 						chmod -R 777 ./*
 						rm -f ./2 ./.* ./*.tar.zst
-						unset packagename
 						echo ""
 					done
-					;;
-				esac
+				else
+					break
+				fi
 			done
-		esac
+		fi
 
 		# EXPORT THE APPDIR TO AN APPIMAGE
 		while true; do
 			read -r -p  " Do you wish to export $APP.AppDir to an AppImage (Y/n)?" response
-			case $response in
-			[Nn]* )
-				break
-				;;
-			[Yy]*|* )
+			if ! echo "$response" | grep -qi "^n"; then
 				echo ""
 				ARCH=$(uname -m) _appimagetool -n ./"$APP"/"$APP".AppDir 2>/dev/null
 				mv ./*.AppImage "$(xdg-user-dir DESKTOP)" 2>/dev/null
 				_DIVIDING_LINE
 				echo " $APP has been exported on your desktop!"
-				sleep 2
 				echo ""
 				echo " Repeat this operation in case the AppImage doesn't work:"
-				sleep 1
 				echo ""
-				;;
-			esac
+			fi
 		done
 		_DIVIDING_LINE
 		echo '  THANK YOU FOR USING ARCH-DEPLOYER!'
 		echo ""
-		sleep 1
-		echo '  Please consider submitting your application to "AM"'
+		echo "  Please consider submitting your application to \"AM\""
 		echo ""
 		echo "  SITE: https://github.com/ivan-hc/AM"
 		echo ""
-		echo '############################################################################'
-		echo
+		echo "############################################################################"
 		exit 
 	done
 esac
